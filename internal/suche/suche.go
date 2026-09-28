@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/grandcat/zeroconf"
+	"github.com/libp2p/zeroconf/v2"
 )
 
 // Dienstart is the DNS-SD service type. It carries the app's own name so nothing else
@@ -63,10 +63,6 @@ func (l *Liste) Beobachten(ctx context.Context, abstand time.Duration) {
 
 // EinmalSuchen runs a single scan and folds the result into the list.
 func (l *Liste) EinmalSuchen(ctx context.Context, dauer time.Duration) error {
-	sucher, err := zeroconf.NewResolver(nil)
-	if err != nil {
-		return err
-	}
 	treffer := make(chan *zeroconf.ServiceEntry, 16)
 	fertig := make(chan struct{})
 	go func() {
@@ -83,7 +79,7 @@ func (l *Liste) EinmalSuchen(ctx context.Context, dauer time.Duration) error {
 	}()
 	suchZeit, abbrechen := context.WithTimeout(ctx, dauer)
 	defer abbrechen()
-	if err := sucher.Browse(suchZeit, Dienstart, "local.", treffer); err != nil {
+	if err := zeroconf.Browse(suchZeit, Dienstart, "local.", treffer); err != nil {
 		return err
 	}
 	<-suchZeit.Done()
