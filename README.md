@@ -42,8 +42,21 @@ Interruptions are the normal case on a home network, so the design assumes them:
 - Each device generates its own TLS certificate on first start and announces that
   certificate's fingerprint. A sender refuses to talk to a device whose certificate does
   not match, so nothing on the network can slip in between.
-- Every request carries the receiving side's six-digit code. Without it the answer is 403.
-- The user interface listens on loopback only; the network port serves the other device.
+- Every request carries the receiving side's six-digit code, compared in constant time.
+  Without it the answer is 403, and **after five wrong codes the address has to wait** —
+  30 seconds, doubling per further miss up to 15 minutes. That takes guessing a million
+  combinations off the table.
+- The user interface listens on 127.0.0.1 only, refuses requests carrying any other
+  `Host` name, turns away cross-site writes, and sends a strict content security policy.
+- An incoming file is stripped to its base name and never overwrites an existing one.
+
+Every release carries SHA-256 sums and a GitHub build attestation:
+
+```
+gh attestation verify Quicksend.exe -R Dschonas04/quicksend
+```
+
+More on the threat model and the known limits: [SECURITY.md](SECURITY.md).
 
 ## Ports
 

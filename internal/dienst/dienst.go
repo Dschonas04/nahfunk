@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Dschonas04/quicksend/internal/einstellungen"
@@ -34,6 +35,16 @@ type Dienst struct {
 	Empfang *empfang.Empfang
 	Versand *versand.Versand
 	Liste   *suche.Liste
+
+	einmal sync.Once
+	brems  *bremse
+}
+
+// Bremse throttles wrong codes per address. It is built on first use, so a Dienst still
+// works as a plain struct literal.
+func (d *Dienst) Bremse() *bremse {
+	d.einmal.Do(func() { d.brems = neueBremse() })
+	return d.brems
 }
 
 // GegenMux serves the other device. Every call needs the receiving side's code.
@@ -225,15 +236,25 @@ func (d *Dienst) UiMux() *http.ServeMux {
 	return mux
 }
 
-// mitCode rejects anything that does not carry the receiving side's code.
+// mitCode rejects anything that does not carry the receiving side's code, and slows an
+// address down that keeps guessing.
 func (d *Dienst) mitCode(weiter http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		wer := absender(r)
+		if frei, rest := d.Bremse().Darf(wer); !frei {
+			w.Header().Set("Retry-After", strconv.Itoa(int(rest.Seconds())+1))
+			fehler(w, http.StatusTooManyRequests,
+				fmt.Errorf("zu viele falsche Codes, bitte %s warten", rest.Round(time.Second)))
+			return
+		}
 		gegeben := r.Header.Get("X-Quicksend-Code")
 		soll := d.Einst.Freigabecode
 		if subtle.ConstantTimeCompare([]byte(gegeben), []byte(soll)) != 1 {
+			d.Bremse().Fehlschlag(wer)
 			fehler(w, http.StatusForbidden, errors.New("falscher Freigabecode"))
 			return
 		}
+		d.Bremse().Erfolg(wer)
 		weiter(w, r)
 	}
 }
@@ -241,7 +262,7 @@ func (d *Dienst) mitCode(weiter http.HandlerFunc) http.HandlerFunc {
 // Starten brings both listeners up and returns once the context ends.
 func (d *Dienst) Starten(ctx context.Context) error {
 	gegen := &http.Server{
-		Handler: d.GegenMux(),
+		Handler: mitKopfzeilen(d.GegenMux(), false),
 		TLSConfig: &tls.Config{
 			Certificates: []tls.Certificate{d.Kennung.Zertifikat},
 			MinVersion:   tls.VersionTLS12,
@@ -252,7 +273,10 @@ func (d *Dienst) Starten(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Port %d ist belegt: %w", d.Einst.Port, err)
 	}
-	ui := &http.Server{Handler: d.UiMux(), ReadHeaderTimeout: 20 * time.Second}
+	ui := &http.Server{
+		Handler:           NurOertlich(GleicherUrsprung(mitKopfzeilen(d.UiMux(), true))),
+		ReadHeaderTimeout: 20 * time.Second,
+	}
 	uiLauscher, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", d.Einst.UiPort()))
 	if err != nil {
 		lauscher.Close()

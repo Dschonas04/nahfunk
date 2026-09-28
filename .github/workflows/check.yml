@@ -6,11 +6,23 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Nothing in this workflow needs to write anything.
+permissions:
+  contents: read
+
+# A newer push makes an older run pointless.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
@@ -22,10 +34,31 @@ jobs:
             echo "gofmt fehlt bei:"; echo "$nicht_formatiert"; exit 1
           fi
       - run: go vet ./...
-      - run: go test -count=1 ./...
+      - name: go.mod ist aufgeräumt
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+      - name: Tests mit Wettlauf-Prüfer
+        run: go test -race -count=1 ./...
       - name: cross compile
         run: |
           for paar in "linux amd64" "linux arm64" "windows amd64" "darwin amd64" "darwin arm64"; do
             set -- $paar
             CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build -o /tmp/quicksend-$1-$2 ./cmd/quicksend
           done
+
+  schwachstellen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+          cache: true
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...

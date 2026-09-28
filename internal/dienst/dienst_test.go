@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -203,8 +204,90 @@ func TestFalscherCodeWirdAbgelehnt(t *testing.T) {
 	if stand.Zustand == tagebuch.Fertig {
 		t.Fatal("falscher Code hätte abgelehnt werden müssen")
 	}
-	if !strings.Contains(stand.Meldung, "403") && !strings.Contains(stand.Meldung, "Freigabecode") {
+	// Either the plain refusal or, after enough tries, the brake kicking in.
+	if !strings.Contains(stand.Meldung, "403") && !strings.Contains(stand.Meldung, "Freigabecode") &&
+		!strings.Contains(stand.Meldung, "429") && !strings.Contains(stand.Meldung, "falschen Codes") {
 		t.Fatalf("Meldung nennt den Grund nicht: %q", stand.Meldung)
+	}
+}
+
+func TestZuVieleFalscheCodesWerdenGebremst(t *testing.T) {
+	adresse, _, _ := gegenseite(t, t.TempDir(), 0)
+	kunde := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // pinning is tested elsewhere
+	}}
+	rufen := func(code string) int {
+		anfrage, err := http.NewRequest(http.MethodGet, "https://"+adresse+"/gegen/hallo", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		anfrage.Header.Set("X-Quicksend-Code", code)
+		antwort, err := kunde.Do(anfrage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer antwort.Body.Close()
+		return antwort.StatusCode
+	}
+
+	for i := 0; i < dienst.FreieVersuche; i++ {
+		if kode := rufen("000000"); kode != http.StatusForbidden {
+			t.Fatalf("Versuch %d antwortete %d statt 403", i+1, kode)
+		}
+	}
+	if kode := rufen("000000"); kode != http.StatusTooManyRequests {
+		t.Fatalf("nach %d Fehlversuchen kam %d statt 429", dienst.FreieVersuche+1, kode)
+	}
+	// While the brake holds, even the right code has to wait.
+	if kode := rufen(testCode); kode != http.StatusTooManyRequests {
+		t.Fatalf("während der Sperre kam %d statt 429", kode)
+	}
+}
+
+func TestOberflaecheWeistFremdenWirtAb(t *testing.T) {
+	aufzeichnung := httptest.NewRecorder()
+	anfrage := httptest.NewRequest(http.MethodGet, "http://beispiel.invalid/api/zustand", nil)
+	dienst.NurOertlich(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})).ServeHTTP(aufzeichnung, anfrage)
+	if aufzeichnung.Code != http.StatusForbidden {
+		t.Fatalf("fremder Wirtsname kam mit %d durch", aufzeichnung.Code)
+	}
+
+	aufzeichnung = httptest.NewRecorder()
+	anfrage = httptest.NewRequest(http.MethodGet, "http://127.0.0.1:51766/api/zustand", nil)
+	dienst.NurOertlich(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})).ServeHTTP(aufzeichnung, anfrage)
+	if aufzeichnung.Code != http.StatusOK {
+		t.Fatalf("127.0.0.1 wurde mit %d abgewiesen", aufzeichnung.Code)
+	}
+}
+
+func TestSchreibenVonFremderSeiteWirdAbgewiesen(t *testing.T) {
+	weiter := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	faelle := []struct {
+		name, art, seite, ursprung string
+		erwartet                   int
+	}{
+		{"fremde Seite", http.MethodPost, "cross-site", "", http.StatusForbidden},
+		{"fremder Ursprung", http.MethodPost, "", "http://beispiel.invalid", http.StatusForbidden},
+		{"eigene Seite", http.MethodPost, "same-origin", "http://127.0.0.1:51766", http.StatusOK},
+		{"Lesen bleibt frei", http.MethodGet, "cross-site", "", http.StatusOK},
+	}
+	for _, f := range faelle {
+		aufzeichnung := httptest.NewRecorder()
+		anfrage := httptest.NewRequest(f.art, "http://127.0.0.1:51766/api/senden", nil)
+		if f.seite != "" {
+			anfrage.Header.Set("Sec-Fetch-Site", f.seite)
+		}
+		if f.ursprung != "" {
+			anfrage.Header.Set("Origin", f.ursprung)
+		}
+		dienst.GleicherUrsprung(weiter).ServeHTTP(aufzeichnung, anfrage)
+		if aufzeichnung.Code != f.erwartet {
+			t.Fatalf("%s: %d statt %d", f.name, aufzeichnung.Code, f.erwartet)
+		}
 	}
 }
 

@@ -10,51 +10,100 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  windows-and-linux:
+  fassung:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      wert: ${{ steps.lesen.outputs.wert }}
+    steps:
+      # The version comes either from the tag or from the dispatch input. It is read through
+      # the environment and checked against a pattern, so nothing can be smuggled into the
+      # shell through it.
+      - id: lesen
+        env:
+          AUS_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          AUS_HAND: ${{ inputs.version }}
+        run: |
+          set -eu
+          wert="${AUS_TAG#v}"
+          [ -n "$wert" ] || wert="$AUS_HAND"
+          case "$wert" in
+            [0-9]*.[0-9]*.[0-9]*) : ;;
+            *) echo "Fassung '$wert' sieht nicht wie 1.2.3 aus"; exit 1 ;;
+          esac
+          printf 'wert=%s\n' "$wert" >> "$GITHUB_OUTPUT"
+
+  windows-and-linux:
+    needs: fassung
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
           cache: true
-      - name: version
-        id: v
-        run: echo "wert=${GITHUB_REF_NAME#v}${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
       - name: build
+        env:
+          FASSUNG: ${{ needs.fassung.outputs.wert }}
         run: |
+          set -eu
           mkdir -p dist
-          marke="-s -w -X github.com/Dschonas04/quicksend/internal/dienst.Version=${{ steps.v.outputs.wert }}"
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$marke" -o dist/Quicksend.exe ./cmd/quicksend
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$marke" -o dist/quicksend-linux-amd64 ./cmd/quicksend
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$marke" -o dist/quicksend-linux-arm64 ./cmd/quicksend
+          marke="-s -w -X github.com/Dschonas04/quicksend/internal/dienst.Version=${FASSUNG}"
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$marke" -o dist/Quicksend.exe ./cmd/quicksend
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$marke" -o dist/quicksend-linux-amd64 ./cmd/quicksend
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "$marke" -o dist/quicksend-linux-arm64 ./cmd/quicksend
           (cd dist && sha256sum * > pruefsummen-windows-linux.txt)
+      # Signs a statement "this file came out of this workflow, from this commit", which
+      # anyone can check with: gh attestation verify Quicksend.exe -R Dschonas04/quicksend
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            dist/Quicksend.exe
+            dist/quicksend-linux-amd64
+            dist/quicksend-linux-arm64
       - uses: actions/upload-artifact@v4
         with:
           name: windows-linux
           path: dist/*
 
   macos:
+    needs: fassung
     runs-on: macos-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v6
         with:
           go-version: '1.24'
           cache: true
-      - name: version
-        id: v
-        run: echo "wert=${GITHUB_REF_NAME#v}${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
       - name: build app bundle and dmg
+        env:
+          FASSUNG: ${{ needs.fassung.outputs.wert }}
         run: |
           set -eu
-          fassung="${{ steps.v.outputs.wert }}"
-          marke="-s -w -X github.com/Dschonas04/quicksend/internal/dienst.Version=$fassung"
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$marke" -o quicksend-amd64 ./cmd/quicksend
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$marke" -o quicksend-arm64 ./cmd/quicksend
+          marke="-s -w -X github.com/Dschonas04/quicksend/internal/dienst.Version=${FASSUNG}"
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags "$marke" -o quicksend-amd64 ./cmd/quicksend
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags "$marke" -o quicksend-arm64 ./cmd/quicksend
           lipo -create -output quicksend-universal quicksend-amd64 quicksend-arm64
           paket="dist/Quicksend.app"
           mkdir -p "$paket/Contents/MacOS"
@@ -68,8 +117,8 @@ jobs:
             <key>CFBundleName</key><string>Quicksend</string>
             <key>CFBundleDisplayName</key><string>Quicksend</string>
             <key>CFBundleIdentifier</key><string>io.github.dschonas04.quicksend</string>
-            <key>CFBundleVersion</key><string>$fassung</string>
-            <key>CFBundleShortVersionString</key><string>$fassung</string>
+            <key>CFBundleVersion</key><string>${FASSUNG}</string>
+            <key>CFBundleShortVersionString</key><string>${FASSUNG}</string>
             <key>CFBundleExecutable</key><string>quicksend</string>
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>LSMinimumSystemVersion</key><string>11.0</string>
@@ -81,9 +130,16 @@ jobs:
           </dict>
           </plist>
           PLIST
-          hdiutil create -volname Quicksend -srcfolder dist/Quicksend.app -ov -format UDZO "dist/Quicksend-$fassung-macos.dmg"
+          # Ad-hoc signature: no paid certificate, but the bundle is sealed, so macOS
+          # notices any later tampering instead of running it silently.
+          codesign --force --deep --sign - --timestamp=none "$paket"
+          codesign --verify --strict --verbose=2 "$paket"
+          hdiutil create -volname Quicksend -srcfolder "$paket" -ov -format UDZO "dist/Quicksend-${FASSUNG}-macos.dmg"
           rm -rf "$paket"
           (cd dist && shasum -a 256 * > pruefsummen-macos.txt)
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: dist/Quicksend-*-macos.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: macos
@@ -92,7 +148,10 @@ jobs:
   veroeffentlichen:
     needs: [windows-and-linux, macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 10
+    if: github.ref_type == 'tag'
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v5
         with:
@@ -102,3 +161,4 @@ jobs:
         with:
           files: alle/**/*
           generate_release_notes: true
+          fail_on_unmatched_files: true

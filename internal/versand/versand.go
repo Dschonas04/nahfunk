@@ -126,8 +126,11 @@ func (v *Versand) Einreihen(z Ziel, quelle io.Reader, name string) (tagebuch.Ein
 	if err := tagebuch.Schreiben(v.ordner, e); err != nil {
 		return tagebuch.Eintrag{}, err
 	}
+	// The queue gets its own copy: the worker changes the entry while it runs, and
+	// the value handed back to the caller must not move under them.
+	lauf := e
 	v.sperre.Lock()
-	v.auftraege[id] = &e
+	v.auftraege[id] = &lauf
 	v.sperre.Unlock()
 	v.anstossen()
 	return e, nil
