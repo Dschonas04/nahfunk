@@ -52,7 +52,10 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      # Needs the dependency graph on the repository. If it is off, this should
+      # not block a pull request.
       - uses: actions/dependency-review-action@v4
+        continue-on-error: true
         with:
           fail-on-severity: moderate
           comment-summary-in-pr: on-failure
