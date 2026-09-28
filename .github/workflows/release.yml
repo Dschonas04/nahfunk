@@ -27,10 +27,10 @@ jobs:
       - name: build
         run: |
           mkdir -p dist
-          marke="-s -w -X github.com/Dschonas04/nahfunk/internal/dienst.Version=${{ steps.v.outputs.wert }}"
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$marke" -o dist/Nahfunk.exe ./cmd/nahfunk
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$marke" -o dist/nahfunk-linux-amd64 ./cmd/nahfunk
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$marke" -o dist/nahfunk-linux-arm64 ./cmd/nahfunk
+          marke="-s -w -X github.com/Dschonas04/quicksend/internal/dienst.Version=${{ steps.v.outputs.wert }}"
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$marke" -o dist/Quicksend.exe ./cmd/quicksend
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$marke" -o dist/quicksend-linux-amd64 ./cmd/quicksend
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$marke" -o dist/quicksend-linux-arm64 ./cmd/quicksend
           (cd dist && sha256sum * > pruefsummen-windows-linux.txt)
       - uses: actions/upload-artifact@v4
         with:
@@ -52,36 +52,36 @@ jobs:
         run: |
           set -eu
           fassung="${{ steps.v.outputs.wert }}"
-          marke="-s -w -X github.com/Dschonas04/nahfunk/internal/dienst.Version=$fassung"
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$marke" -o nahfunk-amd64 ./cmd/nahfunk
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$marke" -o nahfunk-arm64 ./cmd/nahfunk
-          lipo -create -output nahfunk-universal nahfunk-amd64 nahfunk-arm64
-          paket="dist/Nahfunk.app"
+          marke="-s -w -X github.com/Dschonas04/quicksend/internal/dienst.Version=$fassung"
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$marke" -o quicksend-amd64 ./cmd/quicksend
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$marke" -o quicksend-arm64 ./cmd/quicksend
+          lipo -create -output quicksend-universal quicksend-amd64 quicksend-arm64
+          paket="dist/Quicksend.app"
           mkdir -p "$paket/Contents/MacOS"
-          cp nahfunk-universal "$paket/Contents/MacOS/nahfunk"
-          chmod +x "$paket/Contents/MacOS/nahfunk"
+          cp quicksend-universal "$paket/Contents/MacOS/quicksend"
+          chmod +x "$paket/Contents/MacOS/quicksend"
           cat > "$paket/Contents/Info.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>CFBundleName</key><string>Nahfunk</string>
-            <key>CFBundleDisplayName</key><string>Nahfunk</string>
-            <key>CFBundleIdentifier</key><string>io.github.dschonas04.nahfunk</string>
+            <key>CFBundleName</key><string>Quicksend</string>
+            <key>CFBundleDisplayName</key><string>Quicksend</string>
+            <key>CFBundleIdentifier</key><string>io.github.dschonas04.quicksend</string>
             <key>CFBundleVersion</key><string>$fassung</string>
             <key>CFBundleShortVersionString</key><string>$fassung</string>
-            <key>CFBundleExecutable</key><string>nahfunk</string>
+            <key>CFBundleExecutable</key><string>quicksend</string>
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>LSMinimumSystemVersion</key><string>11.0</string>
             <key>LSUIElement</key><true/>
             <key>NSLocalNetworkUsageDescription</key>
-            <string>Nahfunk sucht im lokalen Netz nach Geräten, an die es Dateien senden kann.</string>
+            <string>Quicksend sucht im lokalen Netz nach Geräten, an die es Dateien senden kann.</string>
             <key>NSBonjourServices</key>
-            <array><string>_nahfunk._tcp</string></array>
+            <array><string>_quicksend._tcp</string></array>
           </dict>
           </plist>
           PLIST
-          hdiutil create -volname Nahfunk -srcfolder dist/Nahfunk.app -ov -format UDZO "dist/Nahfunk-$fassung-macos.dmg"
+          hdiutil create -volname Quicksend -srcfolder dist/Quicksend.app -ov -format UDZO "dist/Quicksend-$fassung-macos.dmg"
           rm -rf "$paket"
           (cd dist && shasum -a 256 * > pruefsummen-macos.txt)
       - uses: actions/upload-artifact@v4

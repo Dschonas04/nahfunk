@@ -1,4 +1,4 @@
-module github.com/Dschonas04/nahfunk
+module github.com/Dschonas04/quicksend
 
 go 1.22
 

@@ -17,13 +17,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Dschonas04/nahfunk/internal/dienst"
-	"github.com/Dschonas04/nahfunk/internal/einstellungen"
-	"github.com/Dschonas04/nahfunk/internal/empfang"
-	"github.com/Dschonas04/nahfunk/internal/kennung"
-	"github.com/Dschonas04/nahfunk/internal/suche"
-	"github.com/Dschonas04/nahfunk/internal/tagebuch"
-	"github.com/Dschonas04/nahfunk/internal/versand"
+	"github.com/Dschonas04/quicksend/internal/dienst"
+	"github.com/Dschonas04/quicksend/internal/einstellungen"
+	"github.com/Dschonas04/quicksend/internal/empfang"
+	"github.com/Dschonas04/quicksend/internal/kennung"
+	"github.com/Dschonas04/quicksend/internal/suche"
+	"github.com/Dschonas04/quicksend/internal/tagebuch"
+	"github.com/Dschonas04/quicksend/internal/versand"
 )
 
 const testCode = "123456"
@@ -119,7 +119,7 @@ func TestUebertragungUeberlebtAbbruch(t *testing.T) {
 	zielordner := t.TempDir()
 	adresse, finger, abbrueche := gegenseite(t, zielordner, 2)
 
-	daten := bytes.Repeat([]byte("Nahfunk überträgt auch nach einem Abbruch weiter. "), 60000)
+	daten := bytes.Repeat([]byte("Quicksend überträgt auch nach einem Abbruch weiter. "), 60000)
 	abgabe, err := versand.Neu(t.TempDir(), "Sender", func(string) string { return testCode })
 	if err != nil {
 		t.Fatal(err)

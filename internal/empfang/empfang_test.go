@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Dschonas04/nahfunk/internal/tagebuch"
+	"github.com/Dschonas04/quicksend/internal/tagebuch"
 )
 
 func summe(daten []byte) string {
@@ -23,7 +23,7 @@ func TestWiederaufnahmeNachAbbruch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	daten := bytes.Repeat([]byte("nahfunk"), 5000)
+	daten := bytes.Repeat([]byte("quicksend"), 5000)
 	a := Anmeldung{Name: "probe.bin", Groesse: int64(len(daten)), Sha256: summe(daten), Gegenseite: "Testgerät"}
 
 	erste, err := x.Anmelden(a)
@@ -61,7 +61,7 @@ func TestWiederaufnahmeNachAbbruch(t *testing.T) {
 	if !bytes.Equal(gelesen, daten) {
 		t.Fatal("Inhalt stimmt nicht")
 	}
-	if _, err := os.Stat(filepath.Join(ordner, ".nahfunk", erste.Id+".teil")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(ordner, ".quicksend", erste.Id+".teil")); !os.IsNotExist(err) {
 		t.Fatal("Teildatei wurde nicht aufgeräumt")
 	}
 }
@@ -120,7 +120,7 @@ func TestFalscheSummeWirdAbgelehnt(t *testing.T) {
 	if _, err := x.Abschluss(antwort.Id); err == nil {
 		t.Fatal("Abschluss hätte scheitern müssen")
 	}
-	if _, err := os.Stat(filepath.Join(ordner, ".nahfunk", antwort.Id+".teil")); err != nil {
+	if _, err := os.Stat(filepath.Join(ordner, ".quicksend", antwort.Id+".teil")); err != nil {
 		t.Fatal("Teildatei muss für einen neuen Versuch liegen bleiben")
 	}
 	if _, err := os.Stat(filepath.Join(ordner, "falsch.bin")); !os.IsNotExist(err) {

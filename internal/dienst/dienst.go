@@ -17,12 +17,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Dschonas04/nahfunk/internal/einstellungen"
-	"github.com/Dschonas04/nahfunk/internal/empfang"
-	"github.com/Dschonas04/nahfunk/internal/kennung"
-	"github.com/Dschonas04/nahfunk/internal/suche"
-	"github.com/Dschonas04/nahfunk/internal/tagebuch"
-	"github.com/Dschonas04/nahfunk/internal/versand"
+	"github.com/Dschonas04/quicksend/internal/einstellungen"
+	"github.com/Dschonas04/quicksend/internal/empfang"
+	"github.com/Dschonas04/quicksend/internal/kennung"
+	"github.com/Dschonas04/quicksend/internal/suche"
+	"github.com/Dschonas04/quicksend/internal/tagebuch"
+	"github.com/Dschonas04/quicksend/internal/versand"
 )
 
 //go:embed alle/*
@@ -228,7 +228,7 @@ func (d *Dienst) UiMux() *http.ServeMux {
 // mitCode rejects anything that does not carry the receiving side's code.
 func (d *Dienst) mitCode(weiter http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		gegeben := r.Header.Get("X-Nahfunk-Code")
+		gegeben := r.Header.Get("X-Quicksend-Code")
 		soll := d.Einst.Freigabecode
 		if subtle.ConstantTimeCompare([]byte(gegeben), []byte(soll)) != 1 {
 			fehler(w, http.StatusForbidden, errors.New("falscher Freigabecode"))

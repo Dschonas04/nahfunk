@@ -57,7 +57,7 @@ func erzeugen(zertPfad, schluesselPfad, name string) error {
 	}
 	vorlage := x509.Certificate{
 		SerialNumber:          seriennummer,
-		Subject:               pkix.Name{CommonName: "nahfunk " + name},
+		Subject:               pkix.Name{CommonName: "quicksend " + name},
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,

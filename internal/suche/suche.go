@@ -16,7 +16,7 @@ import (
 
 // Dienstart is the DNS-SD service type. It carries the app's own name so nothing else
 // answers by accident.
-const Dienstart = "_nahfunk._tcp"
+const Dienstart = "_quicksend._tcp"
 
 type Geraet struct {
 	Id      string    `json:"id"`
@@ -28,7 +28,7 @@ type Geraet struct {
 
 // Anmelden puts this device on the network. The returned function takes it off again.
 func Anmelden(id, name, finger string, port int) (func(), error) {
-	server, err := zeroconf.Register("nahfunk-"+id, Dienstart, "local.", port,
+	server, err := zeroconf.Register("quicksend-"+id, Dienstart, "local.", port,
 		[]string{"id=" + id, "name=" + name, "fp=" + finger}, nil)
 	if err != nil {
 		return nil, err

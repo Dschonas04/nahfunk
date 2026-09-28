@@ -1,10 +1,10 @@
-# Nahfunk
+# Quicksend
 
 Send files to another computer on the same network. No cloud, no account, no size limit —
 the two machines talk to each other directly, and a transfer that breaks off picks up where
 it stopped instead of starting over.
 
-Available as a single file per system: `Nahfunk.exe` for Windows, `Nahfunk.dmg` for macOS,
+Available as a single file per system: `Quicksend.exe` for Windows, `Quicksend.dmg` for macOS,
 a plain binary for Linux. Nothing to install, nothing to configure.
 
 ## Getting started
@@ -17,7 +17,7 @@ a plain binary for Linux. Nothing to install, nothing to configure.
    top right of its page. It is remembered afterwards.
 
 The receiving side asks before it accepts anything, unless you switch that off in the
-settings. Files land in `Downloads/Nahfunk` by default.
+settings. Files land in `Downloads/Quicksend` by default.
 
 ## Why transfers do not get lost
 
@@ -38,7 +38,7 @@ Interruptions are the normal case on a home network, so the design assumes them:
 
 ## Privacy and safety on the network
 
-- Devices find each other over mDNS (`_nahfunk._tcp`), the same mechanism printers use.
+- Devices find each other over mDNS (`_quicksend._tcp`), the same mechanism printers use.
 - Each device generates its own TLS certificate on first start and announces that
   certificate's fingerprint. A sender refuses to talk to a device whose certificate does
   not match, so nothing on the network can slip in between.
@@ -60,20 +60,20 @@ on first start, allow the app on private networks.
 The same binary works without the browser page:
 
 ```
-nahfunk                              # start the service and open the page
-nahfunk -ohne-browser                # start it quietly, e.g. on a server
-nahfunk geraete                      # list the devices it can see
-nahfunk senden urlaub.zip -an Laptop -code 123456
-nahfunk -name "Büro-PC" -ziel /srv/eingang
+quicksend                              # start the service and open the page
+quicksend -ohne-browser                # start it quietly, e.g. on a server
+quicksend geraete                      # list the devices it can see
+quicksend senden urlaub.zip -an Laptop -code 123456
+quicksend -name "Büro-PC" -ziel /srv/eingang
 ```
 
 ## Where its files live
 
 | What | Where |
 |------|-------|
-| settings, certificate, send queue | `%AppData%\nahfunk` · `~/Library/Application Support/nahfunk` · `~/.config/nahfunk` |
-| received files | the folder set in the settings, `Downloads/Nahfunk` by default |
-| partial files and journal | `.nahfunk` inside that folder |
+| settings, certificate, send queue | `%AppData%\quicksend` · `~/Library/Application Support/quicksend` · `~/.config/quicksend` |
+| received files | the folder set in the settings, `Downloads/Quicksend` by default |
+| partial files and journal | `.quicksend` inside that folder |
 
 ## First start warnings
 
@@ -81,8 +81,8 @@ Both systems warn about software they have not seen signed before. This is expec
 releases are built by GitHub Actions and not signed with a paid certificate.
 
 - **Windows:** SmartScreen → *More info* → *Run anyway*.
-- **macOS:** open the `.dmg`, drag `Nahfunk.app` to Applications, then right-click it once
-  and choose *Open*. Alternatively `xattr -dr com.apple.quarantine /Applications/Nahfunk.app`.
+- **macOS:** open the `.dmg`, drag `Quicksend.app` to Applications, then right-click it once
+  and choose *Open*. Alternatively `xattr -dr com.apple.quarantine /Applications/Quicksend.app`.
 
 ## Building it yourself
 
@@ -90,8 +90,8 @@ Go 1.22 or newer, no C compiler, no other dependency:
 
 ```
 go test ./...
-go build ./cmd/nahfunk
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o Nahfunk.exe ./cmd/nahfunk
+go build ./cmd/quicksend
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o Quicksend.exe ./cmd/quicksend
 ```
 
 ## License

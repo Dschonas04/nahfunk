@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Dschonas04/nahfunk/internal/kennung"
-	"github.com/Dschonas04/nahfunk/internal/tagebuch"
+	"github.com/Dschonas04/quicksend/internal/kennung"
+	"github.com/Dschonas04/quicksend/internal/tagebuch"
 )
 
 // How often an entry is retried before it is parked as failed. The user can start it
@@ -292,7 +292,7 @@ func (v *Versand) ruf(ctx context.Context, kunde *http.Client, art, adresse, weg
 	if err != nil {
 		return err
 	}
-	anfrage.Header.Set("X-Nahfunk-Code", code)
+	anfrage.Header.Set("X-Quicksend-Code", code)
 	anfrage.Header.Set("Content-Type", "application/json")
 	antwort, err := kunde.Do(anfrage)
 	if err != nil {

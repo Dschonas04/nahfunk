@@ -41,7 +41,7 @@ func Ordner() (string, error) {
 		}
 		basis = filepath.Join(heim, ".config")
 	}
-	ordner := filepath.Join(basis, "nahfunk")
+	ordner := filepath.Join(basis, "quicksend")
 	if err := os.MkdirAll(ordner, 0o700); err != nil {
 		return "", err
 	}
@@ -148,7 +148,7 @@ func neuerCode() string {
 func standardName() string {
 	name, err := os.Hostname()
 	if err != nil || name == "" {
-		return "Nahfunk-" + runtime.GOOS
+		return "Quicksend-" + runtime.GOOS
 	}
 	return name
 }
@@ -156,13 +156,13 @@ func standardName() string {
 func standardZiel() string {
 	heim, err := os.UserHomeDir()
 	if err != nil {
-		return "nahfunk-empfang"
+		return "quicksend-empfang"
 	}
 	for _, kandidat := range []string{"Downloads", "Download"} {
 		pfad := filepath.Join(heim, kandidat)
 		if info, fehler := os.Stat(pfad); fehler == nil && info.IsDir() {
-			return filepath.Join(pfad, "Nahfunk")
+			return filepath.Join(pfad, "Quicksend")
 		}
 	}
-	return filepath.Join(heim, "Nahfunk")
+	return filepath.Join(heim, "Quicksend")
 }
