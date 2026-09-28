@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nahfunk</title>
+<link rel="stylesheet" href="stil.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Nahfunk</h1>
+    <p class="leise" id="eigen">…</p>
+  </div>
+  <div class="code">
+    <span class="leise">Freigabecode dieses Geräts</span>
+    <strong id="code">······</strong>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>Senden</h2>
+    <div id="ablage" class="ablage">
+      <p>Dateien hierher ziehen oder <label class="knopfartig">auswählen<input type="file" id="auswahl" multiple hidden></label></p>
+      <p class="leise" id="gewaehlt">nichts ausgewählt</p>
+    </div>
+    <div class="reihe">
+      <select id="ziel"></select>
+      <button id="suchen" class="still">Geräte suchen</button>
+      <button id="senden">Senden</button>
+    </div>
+    <p class="hinweis" id="sendeHinweis"></p>
+  </section>
+
+  <section>
+    <h2>Eingang</h2>
+    <ul id="eingang" class="liste"></ul>
+  </section>
+
+  <section>
+    <h2>Ausgang</h2>
+    <ul id="ausgang" class="liste"></ul>
+  </section>
+
+  <section>
+    <h2>Einstellungen</h2>
+    <div class="feld"><label for="name">Gerätename</label><input id="name"></div>
+    <div class="feld"><label for="zielordner">Empfangsordner</label><input id="zielordner"></div>
+    <div class="feld waagerecht"><input type="checkbox" id="auto"><label for="auto">Dateien ohne Rückfrage annehmen</label></div>
+    <button id="speichern" class="still">Speichern</button>
+    <p class="hinweis" id="einstHinweis"></p>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
